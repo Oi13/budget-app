@@ -9,9 +9,9 @@ import plotly.express as px
 from classifier import classify_message
 
 # إعداد الصفحة
-st.set_page_config(page_title="نظام الميزانية", page_icon="📊", layout="wide")
-st.title("📊 نظام تصنيف رسائل البنك وحساب الميزانية")
-st.caption("ألصق رسالة البنك وسيتم استخراج المبلغ وتصنيف العملية تلقائيًا. يخزن في CSV، وتقدر تصدّر لإكسل.")
+st.set_page_config(page_title="حاسبة الميزانية", page_icon="💸", layout="wide")
+st.title("💰 حــــســــاب الــــمــــيزانــــية")
+# st.caption("ألصق رسالة البنك وسيتم استخراج المبلغ وتصنيف العملية تلقائيًا. يخزن في CSV، وتقدر تصدّر لإكسل.")
 
 # مسارات
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -25,7 +25,7 @@ if not os.path.exists(CSV_PATH):
 
 # الشريط الجانبي
 with st.sidebar:
-    st.header("⚙️ إعدادات سريعة")
+    # st.header("⚙️ إعدادات سريعة")
     st.write("ملف التخزين (CSV):")
     st.code(CSV_PATH, language="bash")
     export_excel = st.button("⬇️ تصدير إلى Excel (Dashboard)")
@@ -37,12 +37,12 @@ tab1, tab2 = st.tabs(["📩 إضافة عملية", "📒 السجل"])
 with tab1:
     with st.form("add_form", clear_on_submit=True):
         msg = st.text_area(
-            "ألصق رسالة البنك هنا",
+            "أضـــــف عــملــــية",
             height=140,
-            placeholder="مثال: تم شراء 22.50 ر.س في شاورما اكسبرس بواسطة بطاقة مدى من البنك الأهلي"
+            placeholder="مثال: شراء من مطعم الرومانسية بقيمة 100 ريال"
         )
-        force_save = st.checkbox("اعتبرها ادخار/استثمار")
-        submitted = st.form_submit_button("تصنيف وإضافة ➕")
+        force_save = st.checkbox("💪 اســـتثمرها يا وحــش")
+        submitted = st.form_submit_button("إدراج العـــمــلـــــية➕")
 
         if submitted:
             if msg.strip():
@@ -57,7 +57,7 @@ with tab1:
                 st.success("تمت الإضافة ✔️")
                 st.json(res, expanded=False)
             else:
-                st.warning("أكتب نص الرسالة أول.")
+                st.warning("!يا حــــبيـــبي اكـــــتب الرســـــالة أول")
 
 # ---------------- Tab 2: السجل + الحذف + الإحصائيات ----------------
 with tab2:
@@ -92,9 +92,9 @@ with tab2:
 
     c1, c2, c3, c4 = st.columns(4)
     with c1: st.metric("💸 إجمالي المصروفات", f"{-total_exp:,.2f} SAR")
-    with c2: st.metric("💰 إجمالي الدخل", f"{total_inc:,.2f} SAR")
-    with c3: st.metric("🏦 ادخار/استثمار", f"{total_save:,.2f} SAR")
-    with c4: st.metric("⚖️ الصافي القابل للصرف", f"{net_spendable:,.2f} SAR")
+    with c2: st.metric("💰 إجمالي الايرادات", f"{total_inc:,.2f} SAR")
+    with c3: st.metric("🏦 استثمار", f"{total_save:,.2f} SAR")
+    with c4: st.metric("⚖️ الصافي", f"{net_spendable:,.2f} SAR")
 
     # 🎯 مصروفات استهلاكية فقط (بدون الادخار) — Pie
     exp_only = df[df["type"] == "Expense"] if not df.empty else df
