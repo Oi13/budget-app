@@ -35,13 +35,16 @@ def extract_amount(text: str):
         return float(m.group(1))
     return None
 
-def guess_type(text: str, income_keywords):
+def guess_type(text: str, income_keywords, saving_keywords):
     if any(k in text for k in income_keywords):
         return "Income"
+    if any(k in text for k in saving_keywords):
+        return "Saving"   # نوع ثالث
     expense_cues = ["خصم", "سحب", "شراء", "تم الشراء", "دفعة", "مدفوع"]
     if any(k in text for k in expense_cues):
         return "Expense"
     return "Expense"
+
 
 def guess_category(text: str, categories_map):
     t = text.lower()
