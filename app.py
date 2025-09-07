@@ -95,30 +95,35 @@ with tab2:
             st.success("تم الحذف ✔️")
             st.rerun()
 
-    # إجماليات (تظهر حتى لو فاضي)
-total_exp = df.loc[df["type"] == "Expense",
-                   "amount"].sum() if not df.empty else 0
-total_inc = df.loc[df["type"] == "Income",
-                   "amount"].sum() if not df.empty else 0
-net = total_inc + total_exp
+   # إجماليات
+total_exp = df.loc[df["type"] == "Expense", "amount"].sum() if not df.empty else 0
+total_inc = df.loc[df["type"] == "Income", "amount"].sum() if not df.empty else 0
 
-c1, c2, c3 = st.columns(3)
-with c1:
-    st.metric("💸 إجمالي المصروف", f"{-total_exp:,.2f} SAR")
-with c2:
-    st.metric("💰 إجمالي الدخل", f"{total_inc:,.2f} SAR")
-with c3:
-    st.metric("⚖️ الصافي", f"{net:,.2f} SAR")
+save_mask = df["type"].isin(["Saving", "Investment"]) if not df.empty else False
+total_save_signed = df.loc[save_mask, "amount"].sum() if not df.empty else 0
+total_save = abs(total_save_signed)
 
-# 🎯 رسم بياني دائري للمصروفات حسب التصنيف
-exp_by_cat = df[df["type"] == "Expense"].groupby(
-    "category")["amount"].sum().abs().reset_index()
+# الصافي القابل للصرف = الدخل - المصروفات - الادخار
+net_spendable = total_inc + total_exp - total_save
+
+c1, c2, c3, c4 = st.columns(4)
+with c1: st.metric("💸 إجمالي المصروفات", f"{-total_exp:,.2f} SAR")
+with c2: st.metric("💰 إجمالي الدخل", f"{total_inc:,.2f} SAR")
+with c3: st.metric("🏦 ادخار/استثمار", f"{total_save:,.2f} SAR")
+with c4: st.metric("⚖️ الصافي القابل للصرف", f"{net_spendable:,.2f} SAR")
+
+
+
+# مصروفات استهلاكية فقط (بدون Saving/Investment)
+exp_only = df[df["type"] == "Expense"] if not df.empty else df
+exp_by_cat = exp_only.groupby("category")["amount"].sum().abs().reset_index() if not exp_only.empty else pd.DataFrame(columns=["category","amount"])
+
 if not exp_by_cat.empty:
-    fig = px.pie(exp_by_cat, values="amount", names="category",
-                 title="توزيع المصروفات حسب التصنيف")
+    fig = px.pie(exp_by_cat, values="amount", names="category", title="توزيع المصروفات حسب التصنيف")
     st.plotly_chart(fig, use_container_width=True)
 else:
     st.info("📭 ما فيه مصروفات لعرضها في الرسم البياني.")
+
 
 
 if export_excel:
