@@ -87,22 +87,28 @@ def extract_merchant(text: str):
 
 def classify_message(message: str):
     cfg = load_config()
-    text = normalize_digits(message)
-    amount = extract_amount(text) or 0.0
-    tx_type = guess_type(text, cfg.get("income_keywords", []))
-    account = guess_account(text)
-    payment_method = guess_payment_method(text)
-    merchant = extract_merchant(text)
-    category = guess_category(text, cfg.get("categories", {}))
-    signed = amount if tx_type == "Income" else -abs(amount)
-    today = datetime.datetime.now().strftime("%Y-%m-%d")
-    return {
-        "date": today,
-        "account": account,
-        "merchant": merchant,
-        "category": category,
-        "payment_method": payment_method,
-        "amount": signed,
-        "type": tx_type,
-        "raw": message
+text = normalize_digits(message)
+amount = extract_amount(text) or 0.0
+
+tx_type = guess_type(text, cfg.get("income_keywords", []), cfg.get("saving_keywords", []))
+account = guess_account(text)
+payment_method = guess_payment_method(text)
+merchant = extract_merchant(text)
+category = guess_category(text, cfg.get("categories", {}))
+
+# لو ادخار وما تحدد تصنيف واضح، نحطه على Savings & Investment
+if tx_type == "Saving" and (not category or category in ["Misc", ""]):
+    category = "Savings & Investment"
+
+signed = amount if tx_type == "Income" else -abs(amount)
+today = datetime.datetime.now().strftime("%Y-%m-%d")
+return {
+    "date": today,
+    "account": account,
+    "merchant": merchant,
+    "category": category,
+    "payment_method": payment_method,
+    "amount": signed,
+    "type": tx_type,
+    "raw": message
     }
