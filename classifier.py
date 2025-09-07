@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 import re, json, os, unicodedata, datetime
 
@@ -10,20 +9,20 @@ def load_config():
         return json.load(f)
 
 def normalize_digits(text: str) -> str:
+    # يحوّل الأرقام العربية لإنجليزية ويطبّع النص
     table = str.maketrans("٠١٢٣٤٥٦٧٨٩٫٬", "0123456789..")
     text = text.translate(table)
-    text = unicodedata.normalize("NFKC", text)
-    return text
+    return unicodedata.normalize("NFKC", text)
 
 def extract_amount(text: str):
     text = text.replace(",", ".")
-    patterns = [
+    pats = [
         r'(?:SAR|ر\.?س|ريال|RS|S\.?R\.?)\s*([0-9]+(?:\.[0-9]+)?)',
         r'([0-9]+(?:\.[0-9]+)?)\s*(?:SAR|ر\.?س|ريال|RS|S\.?R\.?)',
         r'مبلغ(?:\s*وقدره)?\s*([0-9]+(?:\.[0-9]+)?)',
         r'([0-9]+(?:\.[0-9]+)?)\s*(?:ريالاً|ريال)'
     ]
-    for p in patterns:
+    for p in pats:
         m = re.search(p, text, re.IGNORECASE)
         if m:
             try:
@@ -31,20 +30,17 @@ def extract_amount(text: str):
             except:
                 pass
     m = re.search(r'([0-9]+(?:\.[0-9]+)?)', text)
-    if m:
-        return float(m.group(1))
-    return None
+    return float(m.group(1)) if m else 0.0
 
 def guess_type(text: str, income_keywords, saving_keywords):
     if any(k in text for k in income_keywords):
         return "Income"
     if any(k in text for k in saving_keywords):
         return "Saving"   # نوع ثالث
-    expense_cues = ["خصم", "سحب", "شراء", "تم الشراء", "دفعة", "مدفوع"]
+    expense_cues = ["خصم","سحب","شراء","تم الشراء","دفعة","مدفوع"]
     if any(k in text for k in expense_cues):
         return "Expense"
     return "Expense"
-
 
 def guess_category(text: str, categories_map):
     t = text.lower()
@@ -59,18 +55,16 @@ def guess_category(text: str, categories_map):
     return "Misc"
 
 def guess_account(text: str):
-    if "الراجحي" in text or "Rajhi" in text:
-        return "AlRajhi"
     if "الأهلي" in text or "اهلي" in text or "AlAhli" in text:
         return "AlAhli"
-    if "Tekmoo" in text or "تيكمو" in text:
-        return "Tekmoo"
+    if "الراجحي" in text or "Rajhi" in text:
+        return "AlRajhi"
     return "Main"
 
 def guess_payment_method(text: str):
-    if "بطاقة" in text or "مدى" in text or "Visa" in text or "Mastercard" in text:
+    if any(k in text for k in ["بطاقة","مدى","Visa","Mastercard"]):
         return "Card"
-    if "تحويل" in text or "حوالة" in text:
+    if any(k in text for k in ["تحويل","حوالة"]):
         return "Bank Transfer"
     if "نقدي" in text:
         return "Cash"
@@ -87,28 +81,29 @@ def extract_merchant(text: str):
 
 def classify_message(message: str):
     cfg = load_config()
-text = normalize_digits(message)
-amount = extract_amount(text) or 0.0
+    text = normalize_digits(message)
+    amount = extract_amount(text) or 0.0
 
-tx_type = guess_type(text, cfg.get("income_keywords", []), cfg.get("saving_keywords", []))
-account = guess_account(text)
-payment_method = guess_payment_method(text)
-merchant = extract_merchant(text)
-category = guess_category(text, cfg.get("categories", {}))
+    tx_type = guess_type(text, cfg.get("income_keywords", []), cfg.get("saving_keywords", []))
+    account = guess_account(text)
+    payment_method = guess_payment_method(text)
+    merchant = extract_merchant(text)
+    category = guess_category(text, cfg.get("categories", {}))
 
-# لو ادخار وما تحدد تصنيف واضح، نحطه على Savings & Investment
-if tx_type == "Saving" and (not category or category in ["Misc", ""]):
-    category = "Savings & Investment"
+    # لو ادخار وما تحدد تصنيف واضح، نخليه Savings & Investment
+    if tx_type == "Saving" and (not category or category in ["Misc",""]):
+        category = "Savings & Investment"
 
-signed = amount if tx_type == "Income" else -abs(amount)
-today = datetime.datetime.now().strftime("%Y-%m-%d")
-return {
-    "date": today,
-    "account": account,
-    "merchant": merchant,
-    "category": category,
-    "payment_method": payment_method,
-    "amount": signed,
-    "type": tx_type,
-    "raw": message
+    signed = amount if tx_type == "Income" else -abs(amount)
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+
+    return {
+        "date": today,
+        "account": account,
+        "merchant": merchant,
+        "category": category,
+        "payment_method": payment_method,
+        "amount": signed,
+        "type": tx_type,
+        "raw": message
     }
