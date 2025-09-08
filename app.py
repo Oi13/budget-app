@@ -70,17 +70,13 @@ with tab1:
         st.write("**اختر التصنيف (اختيار واحد فقط):**")
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.checkbox("الالتزام", key=CHK_KEYS["obl"],
-                        on_change=_exclusive_toggle, args=(CHK_KEYS["obl"],))
+            st.checkbox("الالتزام", key=CHK_KEYS["obl"])
         with c2:
-            st.checkbox("كماليات", key=CHK_KEYS["lux"],
-                        on_change=_exclusive_toggle, args=(CHK_KEYS["lux"],))
+            st.checkbox("كماليات", key=CHK_KEYS["lux"])
         with c3:
-            st.checkbox("ادخار", key=CHK_KEYS["save"],
-                        on_change=_exclusive_toggle, args=(CHK_KEYS["save"],))
+            st.checkbox("ادخار", key=CHK_KEYS["save"])
         with c4:
-            st.checkbox("أخرى", key=CHK_KEYS["misc"],
-                        on_change=_exclusive_toggle, args=(CHK_KEYS["misc"],))
+            st.checkbox("أخرى", key=CHK_KEYS["misc"])
 
         submitted = st.form_submit_button("إدراج العـــمــلـــــية➕")
 
