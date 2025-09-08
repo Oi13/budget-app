@@ -8,30 +8,54 @@ import streamlit as st
 import plotly.express as px
 from classifier import classify_message
 
-# إعداد الصفحة
+# ===== إعداد الصفحة =====
 st.set_page_config(page_title="حاسبة الميزانية", page_icon="💸", layout="wide")
+
+# RTL + محاذاة يمين لكل الواجهة
+st.markdown("""
+<style>
+body, .block-container { direction: rtl; text-align: right; }
+[data-testid="stSidebar"] .block-container { direction: rtl; text-align: right; }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("💰 حــــســــاب الــــمــــيزانــــية")
 # st.caption("ألصق رسالة البنك وسيتم استخراج المبلغ وتصنيف العملية تلقائيًا. يخزن في CSV، وتقدر تصدّر لإكسل.")
 
-# مسارات
+# ===== مسارات =====
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_PATH = os.path.join(BASE_DIR, "sample_transactions.csv")
 
-# تأكد من وجود CSV
+# ===== تهيئة ملف CSV لو مهو موجود =====
 if not os.path.exists(CSV_PATH):
     with open(CSV_PATH, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=["date","account","merchant","category","payment_method","amount","type","raw"])
         writer.writeheader()
 
-# الشريط الجانبي
+# ===== الشريط الجانبي =====
 with st.sidebar:
-    # st.header("⚙️ إعدادات سريعة")
     st.write("ملف التخزين (CSV):")
     st.code(CSV_PATH, language="bash")
     export_excel = st.button("⬇️ تصدير إلى Excel (Dashboard)")
 
-# التبويبات
+# ===== تبويبات =====
 tab1, tab2 = st.tabs(["📩 إضافة عملية", "📒 السجل"])
+
+# ---------- إعداد تشيك بوكس حصري (اختيار واحد فقط) ----------
+CHK_KEYS = {
+    "obl":  "chk_obl",   # الالتزام
+    "lux":  "chk_lux",   # كماليات
+    "save": "chk_save",  # ادخار
+    "misc": "chk_misc"   # أخرى
+}
+for _k in CHK_KEYS.values():
+    st.session_state.setdefault(_k, False)
+
+def _exclusive_toggle(active_key: str):
+    # يخلي التشيك على مفتاح واحد، ويفك الباقي
+    for k in CHK_KEYS.values():
+        if k != active_key:
+            st.session_state[k] = False
 
 # ---------------- Tab 1: إضافة عملية ----------------
 with tab1:
@@ -39,17 +63,52 @@ with tab1:
         msg = st.text_area(
             "أضـــــف عــملــــية",
             height=140,
-            placeholder="مثال: شراء من مطعم الرومانسية بقيمة 100 ريال"
+            placeholder="مثال: شراء من مطعم الرومانسية بقيمة 100 ريال",
+            key="msg_input_main",
         )
-        force_save = st.checkbox("💪 اســـتثمرها يا وحــش")
+
+        st.write("**اختر التصنيف (اختيار واحد فقط):**")
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.checkbox("الالتزام", key=CHK_KEYS["obl"],
+                        on_change=_exclusive_toggle, args=(CHK_KEYS["obl"],))
+        with c2:
+            st.checkbox("كماليات", key=CHK_KEYS["lux"],
+                        on_change=_exclusive_toggle, args=(CHK_KEYS["lux"],))
+        with c3:
+            st.checkbox("ادخار", key=CHK_KEYS["save"],
+                        on_change=_exclusive_toggle, args=(CHK_KEYS["save"],))
+        with c4:
+            st.checkbox("أخرى", key=CHK_KEYS["misc"],
+                        on_change=_exclusive_toggle, args=(CHK_KEYS["misc"],))
+
         submitted = st.form_submit_button("إدراج العـــمــلـــــية➕")
 
         if submitted:
             if msg.strip():
                 res = classify_message(msg.strip())
-                if force_save:
+
+                # نقرأ الاختيار الحصري (إن وُجد)
+                picked = None
+                for name, k in CHK_KEYS.items():
+                    if st.session_state.get(k, False):
+                        picked = name
+                        break
+
+                # نطبّق الاختيار اليدوي على التصنيف/النوع
+                if picked == "save":
                     res["type"] = "Saving"
                     res["category"] = "Savings & Investment"
+                elif picked == "obl":
+                    res["type"] = "Expense"
+                    res["category"] = "الالتزام"
+                elif picked == "lux":
+                    res["type"] = "Expense"
+                    res["category"] = "الكماليات"
+                elif picked == "misc":
+                    res["type"] = "Expense"
+                    res["category"] = "أخرى"
+
                 # إضافة للسجل
                 with open(CSV_PATH, "a", newline="", encoding="utf-8") as f:
                     writer = csv.DictWriter(f, fieldnames=["date","account","merchant","category","payment_method","amount","type","raw"])
@@ -116,10 +175,8 @@ if export_excel:
         from openpyxl import Workbook
         wb = Workbook()
         ws = wb.active; ws.title = "Transactions"
-        # رأس الأعمدة
         cols = ["date","account","merchant","category","payment_method","amount","type","raw"]
         ws.append(cols)
-        # بيانات
         df2 = pd.read_csv(CSV_PATH, encoding="utf-8")
         for row in df2[cols].itertuples(index=False):
             ws.append(list(row))
