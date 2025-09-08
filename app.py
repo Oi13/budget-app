@@ -121,57 +121,88 @@ with tab1:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<div class="page-title">صفحة الهب (إضافة عملية)</div>', unsafe_allow_html=True)
 
-    with st.form("add_form_ui", clear_on_submit=True, border=False):
+    # كل العناصر داخل الفورم + أزرار submit من نفس الفورم
+    with st.form("add_form_ui", clear_on_submit=True):
         st.markdown('<div class="subline">إضافة عملية | إدخال</div>', unsafe_allow_html=True)
-        msg = st.text_input(" ", placeholder="ألصق/اكتب نص العملية هنا …", label_visibility="collapsed")
 
-        # تصنيف يدوي (Checkbox + نوع + تصنيف)
-        force_type = st.checkbox("تصنيف يدوي")
+        msg = st.text_input(
+            " ", 
+            placeholder="ألصق/اكتب نص العملية هنا …", 
+            label_visibility="collapsed",
+            key="msg_input"
+        )
+
+        # تصنيف يدوي
+        force_type = st.checkbox("تصنيف يدوي", key="force_type")
         c1, c2 = st.columns(2)
         with c1:
-            manual_kind = st.radio("النوع", ["Expense","Saving","Income"],
-                                   index=0, horizontal=True, disabled=not force_type)
+            manual_kind = st.radio(
+                "النوع", 
+                ["Expense","Saving","Income"],
+                index=0, horizontal=True, 
+                disabled=not force_type,
+                key="manual_kind_radio"
+            )
         with c2:
             cats = [
                 "Food & Coffee","Shopping","Entertainment","Travel",
                 "Internet & Phone","Transport","Education","Health & Fitness",
                 "Gifts & Family","Savings & Investment","Misc"
             ]
-            manual_cat = st.selectbox("التصنيف", cats, index=cats.index("Misc"), disabled=not force_type)
+            manual_cat = st.selectbox(
+                "التصنيف", 
+                cats, 
+                index=cats.index("Misc"), 
+                disabled=not force_type,
+                key="manual_cat_select"
+            )
 
-        # عدّادات مبالغ جاهزة (Presets)
+        # عدّادات مبالغ جاهزة
         st.markdown('<div class="subline">اختر (اختياري): مبالغ سريعة</div>', unsafe_allow_html=True)
         g1,g2,g3,g4 = st.columns(4)
         with g1:
             st.number_input("🍔 مطاعم/قهوة", min_value=0.0, step=1.0, key="preset_Food & Coffee")
-            st.number_input("🛍️ تسوّق", min_value=0.0, step=1.0, key="preset_Shopping")
+            st.number_input("🛍️ تسوّق",    min_value=0.0, step=1.0, key="preset_Shopping")
         with g2:
-            st.number_input("🎬 ترفيه", min_value=0.0, step=1.0, key="preset_Entertainment")
-            st.number_input("✈️ سفر", min_value=0.0, step=5.0, key="preset_Travel")
+            st.number_input("🎬 ترفيه",     min_value=0.0, step=1.0, key="preset_Entertainment")
+            st.number_input("✈️ سفر",       min_value=0.0, step=5.0, key="preset_Travel")
         with g3:
-            st.number_input("📶 نت/جوال", min_value=0.0, step=1.0, key="preset_Internet & Phone")
-            st.number_input("🚗 تنقّل", min_value=0.0, step=1.0, key="preset_Transport")
+            st.number_input("📶 نت/جوال",   min_value=0.0, step=1.0, key="preset_Internet & Phone")
+            st.number_input("🚗 تنقّل",     min_value=0.0, step=1.0, key="preset_Transport")
         with g4:
             st.number_input("🏦 ادخار/استثمار", min_value=0.0, step=5.0, key="preset_Savings & Investment")
-            st.number_input("📦 متفرقات", min_value=0.0, step=1.0, key="preset_Misc")
+            st.number_input("📦 متفرقات",      min_value=0.0, step=1.0, key="preset_Misc")
 
-        # صف “إدخال سريع” بنفس الكارد
         st.markdown("---")
+
+        # إدخال سريع داخل نفس الفورم + مفاتيح مختلفة
         q1,q2,q3 = st.columns([1,1,1])
         with q1:
-            quick_cat = st.selectbox("التصنيف السريع", cats, index=cats.index("Food & Coffee"))
+            quick_cat = st.selectbox(
+                "التصنيف السريع", cats, 
+                index=cats.index("Food & Coffee"),
+                key="quick_cat_select"
+            )
         with q2:
             quick_amount = st.number_input(
                 "المبلغ", min_value=0.0, step=1.0,
-                value=float(st.session_state.get(f"preset_{quick_cat}", 0.0))
+                value=float(st.session_state.get(f"preset_{quick_cat}", 0.0)),
+                key="quick_amount_num"
             )
         with q3:
-            quick_kind = st.radio("النوع", ["Expense","Saving","Income"], index=0, horizontal=True)
+            quick_kind = st.radio(
+                "نوع العملية",  # <-- غيرنا الليبل عشان ما يتكرر "النوع"
+                ["Expense","Saving","Income"], 
+                index=0, horizontal=True,
+                key="quick_kind_radio"
+            )
 
-        b1,b2 = st.columns(2)
-        add_btn   = b1.form_submit_button("➕ إضافة/تصنيف")
-        quick_btn = b2.form_submit_button("⏱️ إضافة سريعة")
+        # أزرار الفورم (submit) لازم تكون داخل نفس with st.form
+        col_submit1, col_submit2 = st.columns(2)
+        add_btn   = col_submit1.form_submit_button("➕ إضافة/تصنيف")
+        quick_btn = col_submit2.form_submit_button("⏱️ إضافة سريعة")
 
+        # منطق الأزرار
         if add_btn:
             if msg.strip():
                 from classifier import classify_message
